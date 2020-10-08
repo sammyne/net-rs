@@ -24,5 +24,5 @@ pub use values::*;
 #[cfg(test)]
 mod tests;
 
-#[cfg(test)]
-mod examples;
+//#[cfg(test)]
+//mod examples;

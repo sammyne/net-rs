@@ -6,6 +6,31 @@ use super::errors::Error;
 /// It is typically used for query parameters and form values.
 /// Unlike in the http.Header map, the keys in a Values map
 /// are case-sensitive.
+///
+/// # Example
+///
+/// ```
+/// use net::url::Values;
+///
+/// fn main() {
+///     let mut v = Values::default();
+///
+///     v.set("name".to_string(), "Ava");
+///     v.add("friend", "Jess");
+///     v.add("friend", "Sarah");
+///     v.add("friend", "Zoe");
+///
+///     // v.Encode() == "name=Ava&friend=Jess&friend=Sarah&friend=Zoe"
+///     assert_eq!(v.get("name").unwrap(), "Ava");
+///     assert_eq!(v.get("friend").unwrap(), "Jess");
+///
+///     let friends: Vec<String> = vec!["Jess", "Sarah", "Zoe"]
+///         .iter()
+///         .map(|v| v.to_string())
+///         .collect();
+///     assert_eq!(v.0["friend"], friends);
+/// }
+/// ```
 #[derive(Debug, Default)]
 pub struct Values(pub HashMap<String, Vec<String>>);
 
@@ -85,6 +110,26 @@ impl Values {
 /// Query is expected to be a list of key=value settings separated by
 /// ampersands or semicolons. A setting without an equals sign is
 /// interpreted as a key set to an empty value.
+///
+/// # Examples
+///
+/// ```
+/// use std::collections::HashMap;
+///
+/// fn main() {
+///     let m = net::url::parse_query("x=1&y=2&y=3;z").unwrap();
+///
+///     let expected = {
+///         let mut v = HashMap::new();
+///         v.insert("x".to_string(), vec!["1".to_string()]);
+///         v.insert("y".to_string(), vec!["2".to_string(), "3".to_string()]);
+///         v.insert("z".to_string(), vec!["".to_string()]);
+///         v
+///     };
+///
+///     assert_eq!(expected, m.0);
+/// }
+/// ```
 pub fn parse_query(query: &str) -> Result<Values, (Values, Error)> {
     let mut err: Option<Error> = None;
     let mut out = Values(HashMap::new());

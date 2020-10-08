@@ -29,6 +29,40 @@ use super::{UserInfo, Values};
 /// [`path`]: #structfield.path
 /// [`raw_path`]: #structfield.raw_path
 ///
+/// # Example
+///
+/// ```
+/// fn main() {
+///     let mut u = net::url::parse("http://bing.com/search?q=dotnet").unwrap();
+///
+///     u.scheme = "https".to_string();
+///     u.host = "google.com".to_string();
+///
+///     let mut q = u.query();
+///     q.set("q", "golang");
+///
+///     u.raw_query = q.encode();
+///
+///     const EXPECTED: &str = "https://google.com/search?q=golang";
+///     assert_eq!(EXPECTED, u.to_string());
+/// }
+/// ```
+///
+/// # Example
+///
+/// ```
+/// fn main() {
+///     let u = net::url::parse("https://example.com/foo%2fbar").unwrap();
+///
+///     assert_eq!("/foo/bar", u.path, "invalid path");
+///     assert_eq!("/foo%2fbar", u.raw_path, "invalid raw_path");
+///     assert_eq!(
+///         "https://example.com/foo%2fbar",
+///         u.to_string(),
+///         "invalid to_string() output"
+///     );
+/// }
+/// ```
 #[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct URL {
     /// append a query ('?') even if `raw_query` is empty
@@ -61,6 +95,18 @@ impl URL {
     /// The String method uses `escaped_fragment` to construct its result.
     /// In general, code should call `escaped_fragment` instead of
     /// reading `self.raw_fragment` directly.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// fn main() {
+    ///     let u = net::url::parse("http://example.com/#x/y%2Fz").unwrap();
+    ///
+    ///     assert_eq!("x/y/z", u.fragment, "invalid fragment");
+    ///     assert_eq!("x/y%2Fz", u.raw_fragment, "invalid raw fragment");
+    ///     assert_eq!("x/y%2Fz", u.escaped_fragment(), "invalid escaped fragment");
+    /// }
+    /// ```
     pub fn escaped_fragment(&self) -> String {
         if self.raw_fragment != "" && valid_encoded(&self.raw_fragment, Encoding::Fragment) {
             match internal::unescape(&self.raw_fragment, Encoding::Fragment) {
@@ -81,6 +127,18 @@ impl URL {
     /// construct their results.
     /// In general, code should call escaped_path instead of
     /// reading self.raw_path directly.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// fn main() {
+    ///     let u = net::url::parse("http://example.com/x/y%2Fz").unwrap();
+    ///
+    ///     assert_eq!("/x/y/z", u.path, "invalid path");
+    ///     assert_eq!("/x/y%2Fz", u.raw_path, "invalid raw path");
+    ///     assert_eq!("/x/y%2Fz", u.escaped_path(), "invalid escaped path");
+    /// }
+    /// ```
     pub fn escaped_path(&self) -> String {
         if self.raw_path != "" && valid_encoded(&self.raw_path, Encoding::Path) {
             match internal::unescape(&self.raw_path, Encoding::Path) {
@@ -100,6 +158,18 @@ impl URL {
     ///
     /// If the result is enclosed in square brackets, as literal IPv6 addresses are,
     /// the square brackets are removed from the result.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// fn main() {
+    ///     let u = net::url::parse("https://example.org:8000/path").unwrap();
+    ///     assert_eq!("example.org", u.hostname());
+    ///
+    ///     let u = net::url::parse("https://[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:17000").unwrap();
+    ///     assert_eq!("2001:0db8:85a3:0000:0000:8a2e:0370:7334", u.hostname());
+    /// }
+    /// ```
     pub fn hostname(&self) -> &str {
         let (host, _) = split_host_port(&self.host);
         host
@@ -107,6 +177,26 @@ impl URL {
 
     /// is_abs reports whether the URL is absolute.
     /// Absolute means that it has a non-empty scheme.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use net::url::URL;
+    ///
+    /// fn main() {
+    ///     let mut u = URL {
+    ///         host: "example.com".to_string(),
+    ///         path: "foo".to_string(),
+    ///         ..Default::default()
+    ///     };
+    ///
+    ///     assert!(!u.is_abs());
+    ///
+    ///     u.scheme = "http".to_string();
+    ///
+    ///     assert!(u.is_abs());
+    /// }
+    /// ```
     pub fn is_abs(&self) -> bool {
         self.scheme != ""
     }
@@ -123,6 +213,20 @@ impl URL {
     /// port returns the port part of self.host, without the leading colon.
     ///
     /// If self.host doesn't contain a valid numeric port, port returns an empty string.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use net::url;
+    ///
+    /// fn main() {
+    ///     let u = url::parse("https://example.org").unwrap();
+    ///     assert_eq!("", u.port());
+    ///
+    ///     let u = url::parse("https://example.org:8080").unwrap();
+    ///     assert_eq!("8080", u.port());
+    /// }
+    /// ```
     pub fn port(&self) -> &str {
         let (_, port) = split_host_port(&self.host);
         port
@@ -130,7 +234,21 @@ impl URL {
 
     /// query parses raw_query and returns the corresponding values.
     /// It silently discards malformed value pairs.
-    /// To check errors use ParseQuery.
+    /// To check errors use net::url::parse_query.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// fn main() {
+    ///     let q = net::url::parse("https://example.org/?a=1&a=2&b=&=3&&&&")
+    ///         .unwrap()
+    ///         .query();
+    ///
+    ///     assert_eq!(vec!["1".to_string(), "2".to_string()], q.0["a"]);
+    ///     assert_eq!("", q.get("b").unwrap());
+    ///     assert_eq!("3", q.get("").unwrap());
+    /// }
+    /// ```
     pub fn query(&self) -> Values {
         match super::parse_query(&self.raw_query) {
             Ok(v) => v,
@@ -140,6 +258,28 @@ impl URL {
 
     /// redacted is like to_string() but replaces any password with "xxxxx".
     /// Only the password in self.user is redacted.
+    ///     
+    /// # Example
+    ///
+    /// ```
+    /// use net::url::{self, URL};
+    ///
+    /// fn main() {
+    ///     let mut u = URL {
+    ///         scheme: "https".to_string(),
+    ///         user: Some(url::user_password("user", "password")),
+    ///         host: "example.com".to_string(),
+    ///         path: "foo/bar".to_string(),
+    ///         ..Default::default()
+    ///     };
+    ///
+    ///     assert_eq!("https://user:xxxxx@example.com/foo/bar", u.redacted());
+    ///
+    ///     u.user = Some(url::user_password("me", "new_password"));
+    ///
+    ///     assert_eq!("https://me:xxxxx@example.com/foo/bar", u.redacted());
+    /// }
+    /// ```
     pub fn redacted(&self) -> String {
         let mut redacted = self.clone();
         if let Some(v) = &redacted.user {
@@ -153,6 +293,15 @@ impl URL {
 
     /// request_uri returns the encoded path?query or opaque?query
     /// string that would be used in an HTTP request for self.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// fn main() {
+    ///     let u = net::url::parse("https://example.org/path?foo=bar").unwrap();
+    ///     assert_eq!("/path?foo=bar", u.request_uri());
+    /// }
+    /// ```
     pub fn request_uri(&self) -> String {
         let mut out = self.opaque.clone();
         if out == "" {
@@ -178,6 +327,21 @@ impl URL {
     /// URL instance, even if the returned URL is identical to either the
     /// base or reference. If ref is an absolute URL, then resolve_reference
     /// ignores base and returns a copy of ref.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use net::url;
+    ///
+    /// fn main() {
+    ///     let u = url::parse("../../..//search?q=dotnet").unwrap();
+    ///     let base = url::parse("http://example.com/directory/").unwrap();
+    ///
+    ///     let got = base.resolve_reference(&u);
+    ///     const EXPECTED: &str = "http://example.com/search?q=dotnet";
+    ///     assert_eq!(EXPECTED, got.to_string());
+    /// }
+    /// ```
     pub fn resolve_reference(&self, r: &Self) -> Self {
         let mut url = r.clone();
 
@@ -274,6 +438,32 @@ impl fmt::Display for URL {
     ///	   the form host/path does not add its own /.
     ///	- if `self.raw_query` is empty, ?query is omitted.
     ///	- if `self.fragment` is empty, #fragment is omitted.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use net::url::{self, URL};
+    ///
+    /// fn main() {
+    ///     let mut u = URL {
+    ///         scheme: "https".to_string(),
+    ///         user: Some(url::user_password("me", "pass")),
+    ///         host: "example.com".to_string(),
+    ///         path: "foo/bar".to_string(),
+    ///         raw_query: "x=1&y=2".to_string(),
+    ///         fragment: "anchor".to_string(),
+    ///         ..Default::default()
+    ///     };
+    ///
+    ///     assert_eq!(
+    ///         "https://me:pass@example.com/foo/bar?x=1&y=2#anchor",
+    ///         u.to_string()
+    ///     );
+    ///
+    ///     u.opaque = "opaque".to_string();
+    ///     assert_eq!("https:opaque?x=1&y=2#anchor", u.to_string());
+    /// }
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut written = false;
         if self.scheme != "" {
@@ -333,6 +523,24 @@ impl fmt::Display for URL {
 /// (starting with a scheme). Trying to parse a hostname and path
 /// without a scheme is invalid but may not necessarily return an
 /// error, due to parsing ambiguities.
+///
+/// # Example
+///
+/// ```
+/// use net::url;
+/// use net::url::errors::Error;
+///
+/// fn main() {
+///     let u = url::parse("https://example.org").unwrap();
+///     let rel = u.parse("/foo").unwrap();
+///     assert_eq!("https://example.org/foo", rel.to_string());
+///
+///     match u.parse(":foo") {
+///         Err(Error::Wrapped { .. }) => {}
+///         _ => panic!("should has a wrapped error"),
+///     }
+/// }
+/// ```
 pub fn parse(rawurl: &str) -> Result<URL, Error> {
     let (u, frag) = split(rawurl, '#', true);
     let mut url = do_parse(u, false).map_err(|err| errors::wrap("parse", u, err))?;
