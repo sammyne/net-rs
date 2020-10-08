@@ -1,0 +1,38 @@
+name: build-dev
+
+on:
+  push:
+    branches: [ 'dev' ]
+  pull_request:
+    branches: [ 'dev' ]
+
+jobs:
+  test:
+
+    runs-on: ubuntu-18.04
+    container: 
+      image: rust:1.46.0
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        persist-credentials: false
+    - name: Rust toolchains
+      run: |
+        rustc --version &&
+        rustup --version &&
+        cargo --version
+      shell: bash
+    - name: Cache cargo registry
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
+    - name: Cache cargo index
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.toml') }}
+    - name: Run tests
+      run: cargo test
+      shell: bash
