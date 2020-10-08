@@ -1,5 +1,9 @@
+//! module errors define errors about URL operations
+//!
+
 use thiserror::Error;
 
+/// Error define errors about URL operations
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("invalid URL escape `{0}`")]
@@ -8,6 +12,7 @@ pub enum Error {
     InvalidHost(String),
     #[error("{0}")]
     Misc(String),
+    /// Wrapped reports an error and the operation and URL that caused it.
     #[error("{op} {url}: {err}")]
     Wrapped {
         op: String,

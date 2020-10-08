@@ -62,6 +62,8 @@ pub fn escape(s: &str, mode: Encoding) -> String {
     t
 }
 
+/// unescape unescapes a string; the mode specifies
+/// which section of the URL string is being unescaped.
 pub fn unescape(s: &str, mode: Encoding) -> Result<String, Error> {
     // Count %, check that they're well-formed.
     let (n, has_plus) = {
@@ -85,6 +87,12 @@ pub fn unescape(s: &str, mode: Encoding) -> Result<String, Error> {
                         return Err(Error::Escape(unsafe { String::from_utf8_unchecked(err) }));
                     }
 
+                    // Per https://tools.ietf.org/html/rfc3986#page-21
+                    // in the host component %-encoding can only be used
+                    // for non-ASCII bytes.
+                    // But https://tools.ietf.org/html/rfc6874#section-2
+                    // introduces %25 being allowed to escape a percent sign
+                    // in IPv6 scoped-address literals. Yay.
                     if mode == Encoding::Host
                         && unhex(s[i + 1]) < 8
                         && (&s[i..=(i + 2)] != PERCENT_IPV6)
@@ -94,6 +102,13 @@ pub fn unescape(s: &str, mode: Encoding) -> Result<String, Error> {
                     }
 
                     if mode == Encoding::Zone {
+                        // RFC 6874 says basically "anything goes" for zone identifiers
+                        // and that even non-ASCII can be redundantly escaped,
+                        // but it seems prudent to restrict %-escaped bytes here to those
+                        // that are valid host name bytes in their unescaped form.
+                        // That is, you can use escaping in the zone identifier but not
+                        // to introduce bytes you couldn't just write directly.
+                        // But Windows puts spaces here! Yay.
                         let v = unhex(s[i + 1]) << 4 | unhex(s[i + 2]);
                         if (&s[i..=(i + 2)] != PERCENT_IPV6)
                             && v != WHITESPACE
@@ -156,13 +171,28 @@ pub fn unescape(s: &str, mode: Encoding) -> Result<String, Error> {
     Ok(t)
 }
 
+/// Return true if the specified character should be escaped when
+/// appearing in a URL string, according to RFC 3986.
+///
+/// Please be informed that for now should_escape does not check all
+/// reserved characters correctly. See golang.org/issue/5684.
 pub(crate) fn should_escape(c: u8, mode: Encoding) -> bool {
     let c = c as char;
+    // §2.3 Unreserved characters (alphanum)
     if std::matches!(c, 'a'..='z' | 'A'..='Z' | '0'..='9') {
         return false;
     }
 
     if mode == Encoding::Host || mode == Encoding::Zone {
+        // §3.2.2 Host allows
+        //	sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
+        // as part of reg-name.
+        // We add : because we include :port as part of host.
+        // We add [ ] because we include [ipv6]:port as part of host.
+        // We add < > because they're the only characters left that
+        // we could possibly allow, and Parse will reject them if we
+        // escape them (because hosts can't use %-encoding for
+        // ASCII bytes).
         match c {
             '!' | '$' | '&' | '\'' | '(' | ')' | '*' | '+' | ',' | ';' | '=' | ':' | '[' | ']'
             | '<' | '>' | '"' => return false,
@@ -171,22 +201,59 @@ pub(crate) fn should_escape(c: u8, mode: Encoding) -> bool {
     }
 
     match c {
-        '-' | '_' | '.' | '~' => return false,
-        '$' | '&' | '+' | ',' | '/' | ':' | ';' | '=' | '?' | '@' => match mode {
-            Encoding::Path => return c == '?',
-            Encoding::PathSegment => return std::matches!(c, '/' | ';' | ',' | '?'),
-            Encoding::UserPassword => return std::matches!(c, '@' | '/' | '?' | ':'),
-            Encoding::QueryComponent => return true,
-            Encoding::Fragment => return false,
-            _ => {}
-        },
+        '-' | '_' | '.' | '~' => return false, // §2.3 Unreserved characters (mark)
+        '$' | '&' | '+' | ',' | '/' | ':' | ';' | '=' | '?' | '@' => {
+            // §2.2 Reserved characters (reserved)
+            match mode {
+                Encoding::Path => {
+                    // §3.3
+                    // The RFC allows : @ & = + $ but saves / ; , for assigning
+                    // meaning to individual path segments. This package
+                    // only manipulates the path as a whole, so we allow th
+                    return c == '?';
+                }
+                Encoding::PathSegment => {
+                    // §3.3
+                    // The RFC allows : @ & = + $ but saves / ; , for assigning
+                    // meaning to individual path segments.
+                    return std::matches!(c, '/' | ';' | ',' | '?');
+                }
+                Encoding::UserPassword => {
+                    // §3.2.1
+                    // The RFC allows ';', ':', '&', '=', '+', '$', and ',' in
+                    // userinfo, so we must escape only '@', '/', and '?'.
+                    // The parsing of userinfo treats ':' as special so we must escape
+                    // that too.
+                    return std::matches!(c, '@' | '/' | '?' | ':');
+                }
+                Encoding::QueryComponent => {
+                    // §3.4
+                    // The RFC reserves (so we must escape) everything.
+                    return true;
+                }
+                Encoding::Fragment => {
+                    // §4.1
+                    // The RFC text is silent but the grammar allows
+                    // everything, so escape nothing.
+                    return false;
+                }
+                _ => {}
+            }
+        }
         _ => {}
     }
 
+    // RFC 3986 §2.2 allows not escaping sub-delims. A subset of sub-delims are
+    // included in reserved from RFC 2396 §2.2. The remaining sub-delims do not
+    // need to be escaped. To minimize potential breakage, we apply two restrictions:
+    // (1) we always escape sub-delims outside of the fragment, and (2) we always
+    // escape single quote to avoid breaking callers that had previously assumed that
+    // single quotes would be escaped. See issue #19917.
     if mode == Encoding::Fragment && std::matches!(c, '!' | '(' | ')' | '*') {
         return false;
     }
 
+    // Everything else must be escaped.
     true
 }
 

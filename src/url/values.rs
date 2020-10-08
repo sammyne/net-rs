@@ -2,11 +2,16 @@ use std::collections::HashMap;
 
 use super::errors::Error;
 
+/// Values maps a string key to a list of values.
+/// It is typically used for query parameters and form values.
+/// Unlike in the http.Header map, the keys in a Values map
+/// are case-sensitive.
 #[derive(Debug, Default)]
 pub struct Values(pub HashMap<String, Vec<String>>);
 
 impl Values {
-    // @TODO: make key generic
+    /// add adds the value to key. It appends to any existing
+    /// values associated with key.
     pub fn add<K, V>(&mut self, key: K, value: V)
     where
         K: ToString,
@@ -20,10 +25,13 @@ impl Values {
         self.0.get_mut(&key).unwrap().push(value.to_string());
     }
 
+    /// del deletes the values associated with key.
     pub fn del(&mut self, key: &str) {
         self.0.remove(key);
     }
 
+    /// encode encodes the values into "URL encoded" form
+    /// ("bar=baz&foo=quux") sorted by key.
     pub fn encode(&self) -> String {
         let keys = {
             let mut keys = self.0.iter().map(|(k, _)| k).collect::<Vec<_>>();
@@ -51,10 +59,14 @@ impl Values {
         out
     }
 
+    /// get gets the first value associated with the given key.
+    /// If there are no values associated with the key, get returns
+    /// None. To access multiple values, use the map directly.
     pub fn get(&self, key: &str) -> Option<&str> {
         self.0.get(key).map(|v| v[0].as_str())
     }
 
+    /// set sets the key to value. It replaces any existing values.
     pub fn set<K, V>(&mut self, key: K, value: V)
     where
         K: ToString,
@@ -64,6 +76,15 @@ impl Values {
     }
 }
 
+/// parse_query parses the URL-encoded query string and returns
+/// a map listing the values specified for each key.
+/// parse_query always returns a non-nil map containing all the
+/// valid query parameters found; err describes the first decoding error
+/// encountered, if any.
+///
+/// Query is expected to be a list of key=value settings separated by
+/// ampersands or semicolons. A setting without an equals sign is
+/// interpreted as a key set to an empty value.
 pub fn parse_query(query: &str) -> Result<Values, (Values, Error)> {
     let mut err: Option<Error> = None;
     let mut out = Values(HashMap::new());
