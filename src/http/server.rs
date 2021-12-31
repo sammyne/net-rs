@@ -1,5 +1,3 @@
-use std::future::Future;
-use std::pin::Pin;
 use std::{convert::Infallible, io, net::SocketAddr};
 
 use async_trait::async_trait;
@@ -66,6 +64,35 @@ where
             .await
             .map_err(|err| to_other_io_error(err, "serve"))
     }
+
+    pub async fn serve(&self, l: std::net::TcpListener) -> io::Result<()> {
+        let h = self.handler.clone().unwrap();
+        // ref: https://docs.rs/hyper/0.14.16/hyper/server/conn/index.html#example
+        // https://docs.rs/hyper/0.14.16/hyper/service/fn.make_service_fn.html
+        let handler = make_service_fn(|socket: &AddrStream| {
+            let remote_addr = socket.remote_addr();
+            let h = h.clone();
+            async move {
+                let f = move |request: Request| {
+                    let mut h = h.clone();
+                    let remote_addr = remote_addr.clone();
+                    async move {
+                        println!("remote addr = {}", remote_addr);
+                        let mut reply = ResponseWriter::new(Body::empty());
+                        h.serve_http(&mut reply, &request).await;
+                        Ok::<_, Infallible>(reply)
+                    }
+                };
+
+                Ok::<_, Infallible>(service_fn(f))
+            }
+        });
+        hyper::Server::from_tcp(l)
+            .map_err(|err| to_other_io_error(err, "from listener"))?
+            .serve(handler)
+            .await
+            .map_err(|err| to_other_io_error(err, "serve"))
+    }
 }
 
 /*
@@ -91,10 +118,6 @@ where
 }
 
 // internal APIs
-async fn handle(_req: Request) -> Result<Response<Body>, Infallible> {
-    Ok(Response::new(Body::from("hello world!")))
-}
-
 fn to_other_io_error<E>(err: E, desc: &str) -> io::Error
 where
     E: ToString,
