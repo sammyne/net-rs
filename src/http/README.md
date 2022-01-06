@@ -1,6 +1,6 @@
 # http
 
-This module aims to implement HTTP APIs as that of golang's package [net/http].
+This module aims to implement HTTP APIs as that of golang's package [net/http]@1.17.
 
 ## Quickstart
 
