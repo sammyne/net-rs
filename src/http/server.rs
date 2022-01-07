@@ -8,7 +8,6 @@ use crate::http::{Header, Request, StatusCode};
 
 #[async_trait]
 pub trait Handler: Clone + Send + Sync {
-    //async fn serve_http<W>(&mut self, reply: &mut W, request: &Request)
     async fn serve_http<W>(&mut self, reply: &mut W, _request: &Request)
     where
         W: ResponseWriter;
@@ -45,21 +44,18 @@ where
         // ref: https://docs.rs/hyper/0.14.16/hyper/server/conn/index.html#example
         // https://docs.rs/hyper/0.14.16/hyper/service/fn.make_service_fn.html
         let handler = make_service_fn(|socket: &AddrStream| {
-            let remote_addr = socket.remote_addr();
+            //let remote_addr = socket.remote_addr();
             let h = h.clone();
             async move {
                 let f = move |request: Request| {
                     let mut h = h.clone();
-                    let remote_addr = remote_addr.clone();
+                    //let remote_addr = remote_addr.clone();
                     async move {
-                        println!("remote addr = {}", remote_addr);
                         let mut response_writer = MiniResponseWriter::new();
 
                         h.serve_http(&mut response_writer, &request).await;
 
-                        let reply = response_writer.to_hyper();
-
-                        Ok::<_, Infallible>(reply)
+                        Ok::<_, Infallible>(response_writer.to_hyper())
                     }
                 };
 
@@ -105,7 +101,6 @@ struct MiniResponseWriter {
 #[async_trait]
 impl ResponseWriter for MiniResponseWriter {
     async fn write(&mut self, b: &[u8]) -> io::Result<usize> {
-        println!("hello");
         self.inner.body_mut().extend_from_slice(b);
         Ok(b.len())
     }
