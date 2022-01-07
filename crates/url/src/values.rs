@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::errors::Error;
+use crate::errors::Error;
 
 /// Values maps a string key to a list of values.
 /// It is typically used for query parameters and form values.
@@ -10,7 +10,7 @@ use super::errors::Error;
 /// # Example
 ///
 /// ```
-/// use net::url::Values;
+/// use url::Values;
 ///
 /// fn main() {
 ///     let mut v = Values::default();
@@ -117,7 +117,7 @@ impl Values {
 /// use std::collections::HashMap;
 ///
 /// fn main() {
-///     let m = net::url::parse_query("x=1&y=2&y=3;z").unwrap();
+///     let m = url::parse_query("x=1&y=2&y=3;z").unwrap();
 ///
 ///     let expected = {
 ///         let mut v = HashMap::new();

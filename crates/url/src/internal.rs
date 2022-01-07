@@ -1,4 +1,4 @@
-use super::errors::Error;
+use crate::errors::Error;
 
 const WHITESPACE: u8 = ' ' as u8;
 const PERCENT: u8 = '%' as u8;

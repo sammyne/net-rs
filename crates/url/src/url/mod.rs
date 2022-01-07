@@ -33,7 +33,7 @@ use super::{UserInfo, Values};
 ///
 /// ```
 /// fn main() {
-///     let mut u = net::url::parse("http://bing.com/search?q=dotnet").unwrap();
+///     let mut u = url::parse("http://bing.com/search?q=dotnet").unwrap();
 ///
 ///     u.scheme = "https".to_string();
 ///     u.host = "google.com".to_string();
@@ -52,7 +52,7 @@ use super::{UserInfo, Values};
 ///
 /// ```
 /// fn main() {
-///     let u = net::url::parse("https://example.com/foo%2fbar").unwrap();
+///     let u = url::parse("https://example.com/foo%2fbar").unwrap();
 ///
 ///     assert_eq!("/foo/bar", u.path, "invalid path");
 ///     assert_eq!("/foo%2fbar", u.raw_path, "invalid raw_path");
@@ -100,7 +100,7 @@ impl URL {
     ///
     /// ```
     /// fn main() {
-    ///     let u = net::url::parse("http://example.com/#x/y%2Fz").unwrap();
+    ///     let u = url::parse("http://example.com/#x/y%2Fz").unwrap();
     ///
     ///     assert_eq!("x/y/z", u.fragment, "invalid fragment");
     ///     assert_eq!("x/y%2Fz", u.raw_fragment, "invalid raw fragment");
@@ -132,7 +132,7 @@ impl URL {
     ///
     /// ```
     /// fn main() {
-    ///     let u = net::url::parse("http://example.com/x/y%2Fz").unwrap();
+    ///     let u = url::parse("http://example.com/x/y%2Fz").unwrap();
     ///
     ///     assert_eq!("/x/y/z", u.path, "invalid path");
     ///     assert_eq!("/x/y%2Fz", u.raw_path, "invalid raw path");
@@ -163,10 +163,10 @@ impl URL {
     ///
     /// ```
     /// fn main() {
-    ///     let u = net::url::parse("https://example.org:8000/path").unwrap();
+    ///     let u = url::parse("https://example.org:8000/path").unwrap();
     ///     assert_eq!("example.org", u.hostname());
     ///
-    ///     let u = net::url::parse("https://[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:17000").unwrap();
+    ///     let u = url::parse("https://[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:17000").unwrap();
     ///     assert_eq!("2001:0db8:85a3:0000:0000:8a2e:0370:7334", u.hostname());
     /// }
     /// ```
@@ -181,7 +181,7 @@ impl URL {
     /// # Example
     ///
     /// ```
-    /// use net::url::URL;
+    /// use url::URL;
     ///
     /// fn main() {
     ///     let mut u = URL {
@@ -217,8 +217,6 @@ impl URL {
     /// # Example
     ///
     /// ```
-    /// use net::url;
-    ///
     /// fn main() {
     ///     let u = url::parse("https://example.org").unwrap();
     ///     assert_eq!("", u.port());
@@ -234,13 +232,13 @@ impl URL {
 
     /// query parses raw_query and returns the corresponding values.
     /// It silently discards malformed value pairs.
-    /// To check errors use net::url::parse_query.
+    /// To check errors use url::parse_query.
     ///
     /// # Example
     ///
     /// ```
     /// fn main() {
-    ///     let q = net::url::parse("https://example.org/?a=1&a=2&b=&=3&&&&")
+    ///     let q = url::parse("https://example.org/?a=1&a=2&b=&=3&&&&")
     ///         .unwrap()
     ///         .query();
     ///
@@ -262,7 +260,7 @@ impl URL {
     /// # Example
     ///
     /// ```
-    /// use net::url::{self, URL};
+    /// use url::URL;
     ///
     /// fn main() {
     ///     let mut u = URL {
@@ -298,7 +296,7 @@ impl URL {
     ///
     /// ```
     /// fn main() {
-    ///     let u = net::url::parse("https://example.org/path?foo=bar").unwrap();
+    ///     let u = url::parse("https://example.org/path?foo=bar").unwrap();
     ///     assert_eq!("/path?foo=bar", u.request_uri());
     /// }
     /// ```
@@ -331,8 +329,6 @@ impl URL {
     /// # Example
     ///
     /// ```
-    /// use net::url;
-    ///
     /// fn main() {
     ///     let u = url::parse("../../..//search?q=dotnet").unwrap();
     ///     let base = url::parse("http://example.com/directory/").unwrap();
@@ -442,7 +438,7 @@ impl fmt::Display for URL {
     /// # Example
     ///
     /// ```
-    /// use net::url::{self, URL};
+    /// use url::URL;
     ///
     /// fn main() {
     ///     let mut u = URL {
@@ -527,8 +523,7 @@ impl fmt::Display for URL {
 /// # Example
 ///
 /// ```
-/// use net::url;
-/// use net::url::errors::Error;
+/// use url::errors::Error;
 ///
 /// fn main() {
 ///     let u = url::parse("https://example.org").unwrap();

@@ -2,7 +2,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use super::internal::{self, Encoding};
+use crate::internal::{self, Encoding};
 
 /// The Userinfo type is an immutable encapsulation of username and
 /// password details for a URL. An existing Userinfo value is guaranteed

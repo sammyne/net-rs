@@ -15,9 +15,9 @@ mod internal;
 
 pub mod errors;
 
+pub use crate::url::*;
 pub use path::*;
 pub use query::*;
-pub use url::*;
 pub use user_info::*;
 pub use values::*;
 

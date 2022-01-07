@@ -1,4 +1,4 @@
-use super::errors::*;
+use crate::errors::*;
 
 #[test]
 fn unescape() {

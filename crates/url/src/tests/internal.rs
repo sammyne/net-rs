@@ -1,4 +1,4 @@
-use super::super::internal::Encoding;
+use crate::internal::Encoding;
 
 #[test]
 fn should_escape() {

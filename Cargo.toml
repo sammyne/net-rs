@@ -1,14 +1,13 @@
 [package]
 name = "net"
 version = "0.1.0"
-authors = ["sammyne <lixiangmin01@baidu.com>"]
+authors = ["sammyne <xiangminli@alumni.sjtu.edu.cn>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 async-trait = "0.1.52"
-thiserror = "1.0.20"
 
 [dependencies.hyper]
 features = ["full"]
@@ -22,9 +21,14 @@ features = ["derive"]
 features = ["full"]
 version = "1"
 
-[dev-dependencies]
-serde_json = "1.0.58"
+[dependencies.url]
+path = "./crates/url"
 
 [[example]]
 name = "http-listen-and-serve"
 path = "examples/http/listen_and_serve/server.rs"
+
+[workspace]
+members = [
+  "./crates/url",
+]
