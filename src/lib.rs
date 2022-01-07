@@ -1,2 +1,2 @@
-pub mod http;
+pub use http;
 pub use url;

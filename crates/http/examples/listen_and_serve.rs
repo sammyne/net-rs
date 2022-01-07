@@ -1,13 +1,13 @@
 use async_trait::async_trait;
 
-use net::http::{self, Handler, ResponseWriter};
+use http::{self, Handler, Request, ResponseWriter};
 
 #[derive(Clone)]
 struct HelloWorld;
 
 #[async_trait]
 impl Handler for HelloWorld {
-    async fn serve_http<W>(&mut self, reply: &mut W, _request: &http::Request)
+    async fn serve_http<W>(&mut self, reply: &mut W, _request: &Request)
     where
         W: ResponseWriter,
     {

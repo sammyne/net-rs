@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use hyper::server::conn::AddrStream;
 use hyper::service::{make_service_fn, service_fn};
 
-use crate::http::{Header, Request, StatusCode};
+use crate::{Header, Request, StatusCode};
 
 #[async_trait]
 pub trait Handler: Clone + Send + Sync {
@@ -43,7 +43,7 @@ where
         let h = self.handler.clone().unwrap();
         // ref: https://docs.rs/hyper/0.14.16/hyper/server/conn/index.html#example
         // https://docs.rs/hyper/0.14.16/hyper/service/fn.make_service_fn.html
-        let handler = make_service_fn(|socket: &AddrStream| {
+        let handler = make_service_fn(|_socket: &AddrStream| {
             //let remote_addr = socket.remote_addr();
             let h = h.clone();
             async move {

@@ -5,7 +5,7 @@ This module aims to implement HTTP APIs as that of golang's package [net/http]@1
 ## Quickstart
 
 ```bash
-cargo run --example http-listen-and-serve &
+cargo run --example listen_and_serve &
 
 curl localhost:8080
 ```

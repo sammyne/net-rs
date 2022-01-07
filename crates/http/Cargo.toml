@@ -1,0 +1,22 @@
+[package]
+name = "http"
+version = "0.1.0"
+authors = ["sammyne <xiangminli@alumni.sjtu.edu.cn>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait = "0.1.52"
+
+[dependencies.hyper]
+features = ["full"]
+version = "0.14"
+
+[dependencies.serde]
+version  = "1.0.116"
+features = ["derive"]
+
+[dependencies.tokio]
+features = ["full"]
+version = "1"
