@@ -12,10 +12,6 @@ path = "./crates/http"
 [dependencies.url]
 path = "./crates/url"
 
-[[example]]
-name = "http-listen-and-serve"
-path = "examples/http/listen_and_serve/server.rs"
-
 [workspace]
 members = [
   "./crates/http",
