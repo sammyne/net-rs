@@ -1,36 +1,43 @@
 //use std::collections::HashSet;
 //use std::io;
 
+use std::str::FromStr;
+
+use hyper::header::{HeaderName, HeaderValue};
+
 #[derive(Clone)]
 pub struct Header(hyper::HeaderMap);
 
 impl Header {
-    pub fn add<T, S>(&mut self, _key: T, _value: S)
+    pub fn add<T, S>(&mut self, key: T, value: S)
     where
-        T: ToString,
-        S: ToString,
+        T: AsRef<str>,
+        S: AsRef<str>,
     {
-        todo!();
+        let k = HeaderName::from_str(key.as_ref()).expect("bad key");
+        let v = HeaderValue::from_str(value.as_ref()).expect("bad value");
+        self.0.append(k, v);
     }
 
-    pub fn del(&mut self, _key: &str) {
-        todo!();
+    pub fn del(&mut self, key: &str) {
+        self.0.remove(key);
     }
 
-    pub fn get(&self, _key: &str) -> &str {
-        todo!();
+    pub fn get(&self, key: &str) -> Option<&str> {
+        self.0.get(key).map(|v| v.to_str().expect("value as str"))
     }
 
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
-    pub fn set<T, S>(&mut self, _key: T, _value: S)
+    pub fn set<K, V>(&mut self, key: K, value: V)
     where
-        T: ToString,
-        S: ToString,
+        K: AsRef<str>,
+        V: AsRef<str>,
     {
-        todo!();
+        let (k, v) = (must_canonicalize_key(key), must_canonicalize_value(value));
+        self.0.insert(k, v);
     }
 
     // TODO(sammyne)
@@ -64,4 +71,18 @@ impl Header {
     pub(crate) fn to_hyper(&self) -> hyper::HeaderMap {
         self.0.clone()
     }
+}
+
+fn must_canonicalize_key<K>(k: K) -> HeaderName
+where
+    K: AsRef<str>,
+{
+    HeaderName::from_str(k.as_ref()).expect("bad key")
+}
+
+fn must_canonicalize_value<V>(v: V) -> HeaderValue
+where
+    V: AsRef<str>,
+{
+    HeaderValue::from_str(v.as_ref()).expect("bad value")
 }
