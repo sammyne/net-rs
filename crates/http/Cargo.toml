@@ -8,6 +8,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.52"
+tokio-stream = "0.1.8"
 
 [dependencies.hyper]
 features = ["full"]
@@ -20,3 +21,7 @@ features = ["derive"]
 [dependencies.tokio]
 features = ["full"]
 version = "1"
+
+[dependencies.tokio-util]
+features = ["io"]
+version = "0.6.9"

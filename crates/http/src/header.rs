@@ -6,7 +6,7 @@ use std::str::FromStr;
 use hyper::header::{HeaderName, HeaderValue};
 
 #[derive(Clone)]
-pub struct Header(hyper::HeaderMap);
+pub struct Header(pub(crate) hyper::HeaderMap);
 
 impl Header {
     pub fn add<T, S>(&mut self, key: T, value: S)

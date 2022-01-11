@@ -8,9 +8,13 @@ use crate::{Header, Request, StatusCode};
 
 #[async_trait]
 pub trait Handler: Clone + Send + Sync {
-    async fn serve_http<W>(&mut self, reply: &mut W, _request: &Request)
+    async fn serve_http<W>(&mut self, reply: &mut W, _request: Request)
     where
         W: ResponseWriter;
+    //async fn serve_http<W, T>(&mut self, reply: &mut W, _request: &Request<T>)
+    //where
+    //    W: ResponseWriter,
+    //    T: AsyncRead;
 }
 
 #[async_trait]
@@ -47,13 +51,14 @@ where
             //let remote_addr = socket.remote_addr();
             let h = h.clone();
             async move {
-                let f = move |request: Request| {
+                let f = move |request: hyper::Request<hyper::Body>| {
                     let mut h = h.clone();
                     //let remote_addr = remote_addr.clone();
                     async move {
                         let mut response_writer = MiniResponseWriter::new();
 
-                        h.serve_http(&mut response_writer, &request).await;
+                        let request = Request::from_hyper(request);
+                        h.serve_http(&mut response_writer, request).await;
 
                         Ok::<_, Infallible>(response_writer.to_hyper())
                     }
@@ -79,12 +84,12 @@ where
 }
 */
 
-pub async fn listen_and_serve<H>(addr: &str, _handler: Option<H>) -> io::Result<()>
+pub async fn listen_and_serve<H>(addr: &str, handler: Option<H>) -> io::Result<()>
 where
     H: Handler + 'static,
 {
     let s = Server {
-        handler: _handler,
+        handler: handler,
         addr: addr.to_string(),
     };
 

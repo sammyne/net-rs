@@ -7,10 +7,12 @@ struct HelloWorld;
 
 #[async_trait]
 impl Handler for HelloWorld {
-    async fn serve_http<W>(&mut self, reply: &mut W, _request: &Request)
+    async fn serve_http<W>(&mut self, reply: &mut W, request: Request)
     where
         W: ResponseWriter,
     {
+        println!("method = {}", request.method);
+        reply.header().add("hello", "world");
         let _ = reply.write(b"hello world\n").await;
         let _ = reply.write(b"hello world2\n").await;
     }
