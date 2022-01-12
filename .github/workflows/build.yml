@@ -37,7 +37,7 @@ jobs:
       run: cargo test --workspace
       shell: bash
     - name: Generate docs
-      run: cargo doc --no-deps --all-features
+      run: cargo doc --no-deps --all --all-features
     - name: Install rsync for JamesIves/github-pages-deploy-action@releases/v3
       run: apt update && apt install -y rsync
     - name: Deploy docs
