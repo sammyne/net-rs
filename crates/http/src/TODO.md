@@ -1,11 +1,7 @@
 # TODO
 - TLS APIs
 - states maintaining in `Handler`
-
-# DOING
-## 接口
-
-## 文档
+- `Server.listen_and_serve` as macro
 
 # DONE
 

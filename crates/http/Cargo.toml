@@ -10,6 +10,8 @@ edition = "2021"
 async-trait = "0.1.52"
 tokio-stream = "0.1.8"
 
+url = { path = "../url" }
+
 [dependencies.hyper]
 features = ["full"]
 version = "0.14"

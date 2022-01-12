@@ -13,7 +13,7 @@ path = "./crates/http"
 path = "./crates/url"
 
 [workspace]
+# ref: https://doc.rust-lang.org/cargo/reference/workspaces.html#the-workspace-section
 members = [
-  "./crates/http",
-  "./crates/url",
+  "./crates/*",
 ]

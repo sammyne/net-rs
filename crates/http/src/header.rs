@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use hyper::header::{HeaderName, HeaderValue};
 
-#[derive(Clone)]
+#[derive(Clone, Default, Debug)]
 pub struct Header(pub(crate) hyper::HeaderMap);
 
 impl Header {
