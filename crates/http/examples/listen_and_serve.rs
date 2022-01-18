@@ -1,43 +1,33 @@
-use std::sync::Mutex;
+use std::{future::Future, pin::Pin};
 
-use async_trait::async_trait;
-use http::{self, Handler, Request, ResponseWriter};
-use tokio::io::AsyncReadExt;
+use http::{self, Request, ResponseWriter};
 
-struct HelloWorld {
-    c: Mutex<i32>,
-}
+fn hello_handler<'a>(
+    w: &'a mut dyn ResponseWriter,
+    _r: Request,
+) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
+    let v = async {
+        let _ = w.write(b"Hello, world!\n").await;
+    };
 
-#[async_trait]
-impl Handler for HelloWorld {
-    async fn serve_http(&self, reply: &mut dyn ResponseWriter, request: Request) {
-        {
-            *self.c.lock().unwrap() += 1;
-        }
-        {
-            let v = *self.c.lock().unwrap();
-            println!("c = {}", v);
-        }
-        println!("url = {}", request.url);
-        {
-            let mut body = request.body;
-            let mut msg = String::new();
-            let _ = body.read_to_string(&mut msg).await;
-            println!("body = '{}'", msg);
-        }
-
-        println!("header = {:?}", request.header);
-
-        reply.header().add("hello", "world");
-        let _ = reply.write(b"hello world\n").await;
-        let _ = reply.write(b"hello world2\n").await;
-    }
+    Box::pin(v)
 }
 
 #[tokio::main]
 async fn main() {
-    let handler = HelloWorld { c: Mutex::new(1) };
-    if let Err(err) = http::listen_and_serve("127.0.0.1:8080", handler).await {
+    // this failed due to explicit lifetime requirement
+    //let hello_handler =
+    //    |w: &mut dyn ResponseWriter, _r: Request| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+    //        let v = async {
+    //            let _ = w.write(b"Hello, world!\n").await;
+    //        };
+
+    //        Box::pin(v)
+    //    };
+
+    http::handle_func("/hello", hello_handler).await;
+
+    if let Err(err) = http::listen_and_serve!("127.0.0.1:8080").await {
         panic!("fail to listen and serve: {}", err);
     }
 }

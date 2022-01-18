@@ -8,6 +8,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.52"
+lazy_static = "1.4.0"
 tokio-stream = "0.1.8"
 
 url = { path = "../url" }

@@ -1,4 +1,7 @@
+use std::collections::BTreeMap;
+use std::future::Future;
 use std::net::{SocketAddr, TcpListener};
+use std::pin::Pin;
 use std::sync::Arc;
 use std::{convert::Infallible, io};
 
@@ -6,33 +9,26 @@ use async_trait::async_trait;
 use hyper::server::conn::{AddrIncoming, AddrStream};
 use hyper::server::Builder;
 use hyper::service::{make_service_fn, service_fn};
+use lazy_static::lazy_static;
+use tokio::sync::RwLock;
 
 use crate::{Header, Request, StatusCode};
+
+lazy_static! {
+    pub static ref DEFAULT_SERVE_MUX: ServeMux = ServeMux::new();
+}
 
 #[async_trait]
 pub trait Handler: Send + Sync {
     async fn serve_http(&self, reply: &mut dyn ResponseWriter, request: Request);
 }
 
-//pub struct HandleFunc<F, W, O>
-//where
-//    W: ResponseWriter,
-//    F: Fn(&mut W) -> O,
-//    O: Future<Output = ()>,
-//{
-//    inner: F,
-//    _maker: std::marker::PhantomData<(W, O)>,
-//}
-
-//#[async_trait]
-//impl<F, W, O> Handler for HandleFunc<F, W, O>
-//where
-//    W: ResponseWriter,
-//    F: Fn(&mut W) -> O,
-//    O: Future<Output = ()>,
-//{
-//    async fn serve_http(&mut self, reply: &mut W, _request: Request) {}
-//}
+//pub type HandlerFunc =
+//    fn(&mut dyn ResponseWriter, Request) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
+pub type HandlerFunc = for<'a> fn(
+    &'a mut dyn ResponseWriter,
+    Request,
+) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>>;
 
 #[async_trait]
 pub trait ResponseWriter: Send {
@@ -42,23 +38,25 @@ pub trait ResponseWriter: Send {
     fn write_header(&mut self, status_code: StatusCode);
 }
 
-//impl std::any::Any for ResponseWriter {}
-
-#[derive(Default)]
-pub struct Server<H>
-where
-    H: Handler + 'static,
-{
-    pub handler: Arc<H>,
+//#[derive(Default)]
+pub struct Server {
+    pub handler: Arc<dyn Handler + 'static>,
     pub addr: String,
 }
 
-pub struct ServeMux {}
+pub struct ServeMux {
+    // m.keys is sorted thanks to BTreeMap
+    m: RwLock<BTreeMap<String, Box<dyn Handler + 'static>>>,
+}
 
-impl<H> Server<H>
-where
-    H: Handler + 'static,
-{
+#[async_trait]
+impl Handler for HandlerFunc {
+    async fn serve_http(&self, reply: &mut dyn ResponseWriter, request: Request) {
+        self(reply, request).await
+    }
+}
+
+impl Server {
     pub async fn listen_and_serve(&self) -> io::Result<()> {
         let addr: SocketAddr = self
             .addr
@@ -76,10 +74,7 @@ where
     }
 }
 
-impl<H> Server<H>
-where
-    H: Handler + 'static,
-{
+impl Server {
     async fn serve_hyper(&self, b: Builder<AddrIncoming>) -> io::Result<()> {
         let h = self.handler.clone();
         // ref: https://docs.rs/hyper/0.14.16/hyper/server/conn/index.html#example
@@ -112,41 +107,91 @@ where
 
 impl ServeMux {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            m: RwLock::default(),
+        }
     }
 
-    pub fn handle<H>(pattern: &str, handler: H)
+    // @TODO: duplicate patterns
+    pub async fn handle<H>(&self, pattern: &str, handler: H)
     where
         H: Handler + 'static,
     {
-        todo!();
+        if pattern == "" {
+            panic!("http: invalid pattern")
+        }
+
+        let mut m = self.m.write().await;
+
+        if m.contains_key(pattern) {
+            panic!("http: multiple registrations for {}", pattern);
+        }
+
+        m.insert(pattern.to_string(), Box::new(handler));
+    }
+
+    pub async fn handle_func(&self, pattern: &str, handler: HandlerFunc) {
+        self.handle(pattern, handler).await
     }
 }
 
 #[async_trait]
-impl Handler for ServeMux {
-    async fn serve_http(&self, reply: &mut dyn ResponseWriter, request: Request) {
-        todo!();
+impl Handler for &ServeMux {
+    async fn serve_http(&self, w: &mut dyn ResponseWriter, r: Request) {
+        let path = r.url.path.as_str();
+
+        let m = self.m.read().await;
+
+        let h = match m.get(path) {
+            Some(v) => v,
+            None => {
+                let v = m
+                    .iter()
+                    .rev()
+                    .find(|&(k, _)| k.len() < path.len() && path.starts_with(k))
+                    .map(|(_, v)| v);
+                // TODO: 404
+                v.unwrap()
+            }
+        };
+        h.serve_http(w, r).await
     }
 }
 
-pub fn handler_func<H, R>(_pattern: &str, _handler: H)
-where
-    H: Fn(&mut R, &Request),
-    R: ResponseWriter,
-{
-    todo!();
+pub async fn handle_func(pattern: &str, handler: HandlerFunc) {
+    DEFAULT_SERVE_MUX.handle_func(pattern, handler).await
+}
+
+pub async fn world(addr: &str) -> io::Result<()> {
+    let handler = Arc::new(&*DEFAULT_SERVE_MUX);
+    let s = Server {
+        handler: handler,
+        addr: addr.to_string(),
+    };
+
+    s.listen_and_serve().await
+}
+
+#[macro_export]
+macro_rules! listen_and_serve {
+    ($addr:literal) => {
+        $crate::listen_and_serve($addr, &*$crate::DEFAULT_SERVE_MUX)
+    };
+    ($addr:literal, $handler:ident) => {
+        $crate::listen_and_serve($addr, $handler)
+    };
 }
 
 pub async fn listen_and_serve<H>(addr: &str, handler: H) -> io::Result<()>
 where
     H: Handler + 'static,
 {
-    let handler = Arc::new(handler);
     let s = Server {
-        handler: handler,
+        handler: Arc::new(handler),
         addr: addr.to_string(),
     };
+
+    //s.handler = Arc::new(&*DEFAULT_SERVE_MUX);
 
     s.listen_and_serve().await
 }
