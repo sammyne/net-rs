@@ -1,16 +1,8 @@
-use std::{future::Future, pin::Pin};
+use http::{self, handler_func, Request, ResponseWriter};
 
-use http::{self, Request, ResponseWriter};
-
-fn hello_handler<'a>(
-    w: &'a mut dyn ResponseWriter,
-    _r: Request,
-) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
-    let v = async {
-        let _ = w.write(b"Hello, world!\n").await;
-    };
-
-    Box::pin(v)
+#[handler_func]
+async fn hello_handler(w: &mut dyn ResponseWriter, _r: Request) {
+    let _ = w.write(b"Hello, world!\n").await;
 }
 
 #[tokio::main]

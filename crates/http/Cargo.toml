@@ -17,6 +17,9 @@ url = { path = "../url" }
 features = ["full"]
 version = "0.14"
 
+[dependencies.http-proc-macro]
+path = "./proc-macro"
+
 [dependencies.serde]
 version  = "1.0.116"
 features = ["derive"]

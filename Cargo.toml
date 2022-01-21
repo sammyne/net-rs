@@ -16,4 +16,5 @@ path = "./crates/url"
 # ref: https://doc.rust-lang.org/cargo/reference/workspaces.html#the-workspace-section
 members = [
   "./crates/*",
+  "./crates/http/proc-macro",
 ]
