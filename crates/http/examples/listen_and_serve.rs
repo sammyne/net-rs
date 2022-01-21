@@ -1,21 +1,11 @@
 use http::{self, handler_func, Request, ResponseWriter};
 
-#[handler_func]
-async fn hello_handler(w: &mut dyn ResponseWriter, _r: Request) {
-    let _ = w.write(b"Hello, world!\n").await;
-}
-
 #[tokio::main]
 async fn main() {
-    // this failed due to explicit lifetime requirement
-    //let hello_handler =
-    //    |w: &mut dyn ResponseWriter, _r: Request| -> Pin<Box<dyn Future<Output = ()> + Send>> {
-    //        let v = async {
-    //            let _ = w.write(b"Hello, world!\n").await;
-    //        };
-
-    //        Box::pin(v)
-    //    };
+    #[handler_func]
+    async fn hello_handler(w: &mut dyn ResponseWriter, _r: Request) {
+        let _ = w.write(b"Hello, world!\n").await;
+    }
 
     http::handle_func("/hello", hello_handler).await;
 

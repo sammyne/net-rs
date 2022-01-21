@@ -23,8 +23,6 @@ pub trait Handler: Send + Sync {
     async fn serve_http(&self, reply: &mut dyn ResponseWriter, request: Request);
 }
 
-//pub type HandlerFunc =
-//    fn(&mut dyn ResponseWriter, Request) -> Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
 pub type HandlerFunc = for<'a> fn(
     &'a mut dyn ResponseWriter,
     Request,
@@ -143,33 +141,34 @@ impl Handler for &ServeMux {
         let m = self.m.read().await;
 
         let h = match m.get(path) {
-            Some(v) => v,
-            None => {
-                let v = m
-                    .iter()
-                    .rev()
-                    .find(|&(k, _)| k.len() < path.len() && path.starts_with(k))
-                    .map(|(_, v)| v);
-                // TODO: 404
-                v.unwrap()
-            }
+            Some(v) => Some(v),
+            None => m
+                .iter()
+                .rev()
+                .find(|&(k, _)| k.len() < path.len() && path.starts_with(k))
+                .map(|(_, v)| v),
         };
-        h.serve_http(w, r).await
+
+        if let Some(h) = h {
+            h.serve_http(w, r).await
+        } else {
+            not_found(w, r).await
+        }
     }
+}
+
+pub async fn error<E>(w: &mut dyn ResponseWriter, error: E, code: StatusCode)
+where
+    E: AsRef<[u8]>,
+{
+    w.header().set("Content-Type", "text/plain; charset=utf-8");
+    w.header().set("X-Content-Type-Options", "nosniff");
+    w.write_header(code);
+    let _ = w.write(error.as_ref()).await;
 }
 
 pub async fn handle_func(pattern: &str, handler: HandlerFunc) {
     DEFAULT_SERVE_MUX.handle_func(pattern, handler).await
-}
-
-pub async fn world(addr: &str) -> io::Result<()> {
-    let handler = Arc::new(&*DEFAULT_SERVE_MUX);
-    let s = Server {
-        handler: handler,
-        addr: addr.to_string(),
-    };
-
-    s.listen_and_serve().await
 }
 
 #[macro_export]
@@ -191,9 +190,11 @@ where
         addr: addr.to_string(),
     };
 
-    //s.handler = Arc::new(&*DEFAULT_SERVE_MUX);
-
     s.listen_and_serve().await
+}
+
+pub async fn not_found(w: &mut dyn ResponseWriter, _r: Request) {
+    error(w, "404 page not found", StatusCode::NOT_FOUND).await;
 }
 
 // internal APIs
