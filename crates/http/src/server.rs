@@ -182,10 +182,26 @@ pub async fn handle_func(pattern: &str, handler: HandlerFunc) {
 #[macro_export]
 macro_rules! listen_and_serve {
     ($addr:literal) => {
-        $crate::listen_and_serve($addr, &*$crate::DEFAULT_SERVE_MUX)
+        async {
+            let h = &*$crate::DEFAULT_SERVE_MUX;
+            $crate::listen_and_serve!($addr, h).await
+        }
     };
     ($addr:literal, $handler:ident) => {
-        $crate::listen_and_serve($addr, $handler)
+        async {
+            let addr = if $addr.starts_with(":") {
+                format!("127.0.0.1{}", $addr)
+            } else {
+                $addr.to_string()
+            };
+
+            let s = $crate::Server {
+                handler: std::sync::Arc::new($handler),
+                addr: addr,
+            };
+
+            s.listen_and_serve().await
+        }
     };
 }
 

@@ -18,6 +18,5 @@ pub use status::*;
 
 #[handler_func]
 async fn hello_handler(w: &mut dyn ResponseWriter, _r: Request) {
-  let _ = w.write(b"Hello, world!\n").await;
+    let _ = w.write(b"Hello, world!\n").await;
 }
-
