@@ -168,6 +168,13 @@ where
     let _ = w.write(b"\n").await;
 }
 
+pub async fn handle<H>(pattern: &str, handler: H)
+where
+    H: Handler + 'static,
+{
+    DEFAULT_SERVE_MUX.handle(pattern, handler).await
+}
+
 pub async fn handle_func(pattern: &str, handler: HandlerFunc) {
     DEFAULT_SERVE_MUX.handle_func(pattern, handler).await
 }
