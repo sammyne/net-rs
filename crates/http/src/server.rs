@@ -165,6 +165,7 @@ where
     w.header().set("X-Content-Type-Options", "nosniff");
     w.write_header(code);
     let _ = w.write(error.as_ref()).await;
+    let _ = w.write(b"\n").await;
 }
 
 pub async fn handle_func(pattern: &str, handler: HandlerFunc) {
@@ -181,6 +182,7 @@ macro_rules! listen_and_serve {
     };
 }
 
+/// @warn: use the listen_and_serve macro instead.
 pub async fn listen_and_serve<H>(addr: &str, handler: H) -> io::Result<()>
 where
     H: Handler + 'static,

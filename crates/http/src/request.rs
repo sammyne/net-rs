@@ -96,3 +96,27 @@ impl Default for Request {
         }
     }
 }
+
+pub fn parse_http_version(vers: &str) -> Result<(i32, i32), ()> {
+    const BIG: i32 = 100000;
+
+    let _ = match vers {
+        "HTTP/1.1" => return Ok((1, 1)),
+        "HTTP/1.0" => return Ok((1, 0)),
+        _ => {}
+    };
+
+    let vers = vers.strip_prefix("HTTP/").ok_or(())?;
+
+    let mut itr = vers.splitn(2, '.');
+    let major = itr.next().ok_or(())?.parse::<i32>().map_err(|_| ())?;
+    if major < 0 || major > BIG {
+        return Err(());
+    }
+    let minor = itr.next().ok_or(())?.parse::<i32>().map_err(|_| ())?;
+    if minor < 0 || minor > BIG {
+        return Err(());
+    }
+
+    Ok((major, minor))
+}
