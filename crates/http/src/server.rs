@@ -194,9 +194,15 @@ pub async fn listen_and_serve<H>(addr: &str, handler: H) -> io::Result<()>
 where
     H: Handler + 'static,
 {
+    let addr = if addr.starts_with(":") {
+        format!("127.0.0.1{}", addr)
+    } else {
+        addr.to_string()
+    };
+
     let s = Server {
         handler: Arc::new(handler),
-        addr: addr.to_string(),
+        addr: addr,
     };
 
     s.listen_and_serve().await
