@@ -1,9 +1,10 @@
 use std::io;
 use std::net::SocketAddr;
 
+use hyper::{header::HeaderValue, Uri};
 use tokio::io::AsyncRead;
 use tokio_stream::StreamExt;
-use tokio_util::io::StreamReader;
+use tokio_util::io::{ReaderStream, StreamReader};
 use url::URL;
 
 use crate::{Header, Method, Proto};
@@ -40,7 +41,7 @@ impl Request {
         let out = Self {
             method,
             url,
-            body: body,
+            body,
             ..Default::default()
         };
 
@@ -85,14 +86,52 @@ impl Request {
             remote_addr,
         }
     }
+
+    pub(crate) fn to_hyper(self) -> Result<hyper::Request<hyper::Body>, String> {
+        let body = hyper::Body::wrap_stream(ReaderStream::new(self.body));
+
+        let mut out = hyper::Request::new(body);
+
+        *out.method_mut() = self.method;
+        *out.uri_mut() =
+            Uri::try_from(self.url.to_string()).map_err(|err| format!("bad url: {}", err))?;
+        *out.version_mut() = self
+            .proto
+            .try_into()
+            .map_err(|err| format!("bad version: {}", err))?;
+
+        {
+            println!("version = {:?}", out.version());
+        }
+
+        *out.headers_mut() = self.header.0;
+        if self.host.len() > 0 {
+            let v = HeaderValue::from_str(&self.host)
+                .map_err(|err| format!("bad host value: {}", err))?;
+            out.headers_mut().insert(HEADER_KEY_HOST, v);
+        }
+        if let Some(v) = self.content_length {
+            let v = HeaderValue::from_str(&v.to_string()).expect("bad content length");
+            out.headers_mut().insert(HEADER_KEY_CONTENT_LENGTH, v);
+        }
+
+        Ok(out)
+    }
 }
 
 impl Default for Request {
     fn default() -> Self {
         let body = Box::new(tokio::io::empty());
+        let remote_addr = "127.0.0.1:80".parse().expect("bad default remote addr");
         Self {
+            method: Method::GET,
+            url: URL::default(),
+            proto: Proto::default(),
+            header: Header::default(),
             body,
-            ..Default::default()
+            content_length: None,
+            host: String::default(),
+            remote_addr,
         }
     }
 }

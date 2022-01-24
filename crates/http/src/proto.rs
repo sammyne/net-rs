@@ -1,4 +1,4 @@
-use std::convert::From;
+use std::convert::{From, TryInto};
 use std::fmt::Display;
 use std::str::FromStr;
 
@@ -9,7 +9,7 @@ pub struct Proto {
 
 impl Default for Proto {
     fn default() -> Self {
-        Self { major: 2, minor: 0 }
+        Self { major: 1, minor: 1 }
     }
 }
 
@@ -57,5 +57,20 @@ impl FromStr for Proto {
             .map_err(|err| format!("parse minor: {}", err))?;
 
         Ok(Self { major, minor })
+    }
+}
+
+impl TryInto<hyper::Version> for Proto {
+    type Error = String;
+
+    fn try_into(self) -> Result<hyper::Version, Self::Error> {
+        match (self.major, self.minor) {
+            (0, 9) => Ok(hyper::Version::HTTP_09),
+            (1, 0) => Ok(hyper::Version::HTTP_10),
+            (1, 1) => Ok(hyper::Version::HTTP_11),
+            (2, 0) => Ok(hyper::Version::HTTP_2),
+            (3, 0) => Ok(hyper::Version::HTTP_3),
+            _ => Err("unsupported version by hyper".to_string()),
+        }
     }
 }
