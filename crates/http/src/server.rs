@@ -70,6 +70,11 @@ impl Server {
 
         self.serve_hyper(b).await
     }
+
+    // @TODO: support timeout or canceling
+    pub async fn shutdown(&self) -> Result<(), String> {
+        todo!();
+    }
 }
 
 impl Server {
