@@ -5,10 +5,9 @@ use tokio::io::AsyncRead;
 use tokio_stream::StreamExt;
 use tokio_util::io::StreamReader;
 
-use crate::StatusCode;
-
 pub struct Response {
-    pub status: StatusCode,
+    pub status: String,
+    pub status_code: u16,
     pub body: Box<dyn AsyncRead + Unpin + Send + 'static>,
 }
 
@@ -21,8 +20,15 @@ impl From<hyper::Response<hyper::Body>> for Response {
             Box::new(StreamReader::new(v))
         };
 
+        let status = if let Some(v) = parts.status.canonical_reason() {
+            format!("{} {}", parts.status.as_str(), v)
+        } else {
+            parts.status.to_string()
+        };
+
         Self {
-            status: parts.status,
+            status,
+            status_code: parts.status.as_u16(),
             body: body,
         }
     }

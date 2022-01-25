@@ -14,11 +14,10 @@ async fn main() {
         .await
         .expect("read body");
 
-    let status = reply.status.as_u16();
-    if status > 299 {
+    if reply.status_code > 299 {
         panic!(
             "Response failed with status code: {} and\nbody: {}\n",
-            status, body
+            reply.status_code, body
         );
     }
 
