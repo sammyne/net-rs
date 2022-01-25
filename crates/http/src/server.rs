@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 use std::future::Future;
 use std::net::{SocketAddr, TcpListener};
-use std::pin::Pin;
 use std::sync::Arc;
 use std::{convert::Infallible, io};
 
 use async_trait::async_trait;
+use http_proc_macro::handler_func;
 use hyper::server::conn::{AddrIncoming, AddrStream};
 use hyper::server::Builder;
 use hyper::service::{make_service_fn, service_fn};
@@ -26,7 +26,7 @@ pub trait Handler: Send + Sync {
 pub type HandlerFunc = for<'a> fn(
     &'a mut dyn ResponseWriter,
     Request,
-) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>>;
+) -> core::pin::Pin<Box<dyn Future<Output = ()> + Send + 'a>>;
 
 #[async_trait]
 pub trait ResponseWriter: Send {
@@ -134,7 +134,7 @@ impl ServeMux {
 }
 
 #[async_trait]
-impl Handler for &ServeMux {
+impl Handler for ServeMux {
     async fn serve_http(&self, w: &mut dyn ResponseWriter, r: Request) {
         let path = r.url.path.as_str();
 
@@ -154,6 +154,13 @@ impl Handler for &ServeMux {
         } else {
             not_found(w, r).await
         }
+    }
+}
+
+#[async_trait]
+impl Handler for &ServeMux {
+    async fn serve_http(&self, w: &mut dyn ResponseWriter, r: Request) {
+        (*self).serve_http(w, r).await
     }
 }
 
@@ -224,8 +231,21 @@ where
     s.listen_and_serve().await
 }
 
+pub fn new_serve_mux() -> ServeMux {
+    ServeMux::new()
+}
+
 pub async fn not_found(w: &mut dyn ResponseWriter, _r: Request) {
     error(w, "404 page not found", StatusCode::NOT_FOUND).await;
+}
+
+pub fn not_found_handler() -> impl Handler {
+    #[handler_func]
+    async fn out(w: &mut dyn ResponseWriter, r: Request) {
+        not_found(w, r).await
+    }
+
+    out as HandlerFunc
 }
 
 // internal APIs
